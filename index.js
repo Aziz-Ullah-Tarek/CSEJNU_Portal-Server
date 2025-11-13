@@ -39,6 +39,7 @@ let classroomBookingCollection;
 let labBookingCollection;
 let userDashboardCollection;
 let galleryCollection;
+let eventsCollection;
 
 client.connect().then(() => {
     const database = client.db("CSEJNU_PortalDB");
@@ -47,6 +48,7 @@ client.connect().then(() => {
     labBookingCollection = database.collection("lab-bookings");
     userDashboardCollection = database.collection("user-dashboard");
     galleryCollection = database.collection("gallery");
+    eventsCollection = database.collection("events");
     console.log("📚 Database collections initialized");
 });
 
@@ -348,6 +350,78 @@ app.delete('/api/gallery/:id', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: 'Error deleting photo', error: error.message });
+  }
+});
+
+// ========== EVENTS ROUTES ==========
+
+// Get all events
+app.get('/api/events', async (req, res) => {
+  try {
+    const events = await eventsCollection.find().sort({ date: -1 }).toArray();
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching events', error: error.message });
+  }
+});
+
+// Get single event by ID
+app.get('/api/events/:id', async (req, res) => {
+  try {
+    const event = await eventsCollection.findOne({ _id: new ObjectId(req.params.id) });
+    if (event) {
+      res.json(event);
+    } else {
+      res.status(404).json({ message: 'Event not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching event', error: error.message });
+  }
+});
+
+// Create new event
+app.post('/api/events', async (req, res) => {
+  try {
+    const newEvent = {
+      ...req.body,
+      createdAt: new Date().toISOString()
+    };
+    const result = await eventsCollection.insertOne(newEvent);
+    res.status(201).json({ message: 'Event created successfully', eventId: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating event', error: error.message });
+  }
+});
+
+// Update event
+app.put('/api/events/:id', async (req, res) => {
+  try {
+    const { _id, ...updateData } = req.body;
+    const result = await eventsCollection.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updateData }
+    );
+    if (result.matchedCount > 0) {
+      res.json({ message: 'Event updated successfully' });
+    } else {
+      res.status(404).json({ message: 'Event not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating event', error: error.message });
+  }
+});
+
+// Delete event
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    const result = await eventsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+    if (result.deletedCount > 0) {
+      res.json({ message: 'Event deleted successfully' });
+    } else {
+      res.status(404).json({ message: 'Event not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting event', error: error.message });
   }
 });
 
