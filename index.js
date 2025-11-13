@@ -38,6 +38,7 @@ let noticeCollection;
 let classroomBookingCollection;
 let labBookingCollection;
 let userDashboardCollection;
+let galleryCollection;
 
 client.connect().then(() => {
     const database = client.db("CSEJNU_PortalDB");
@@ -45,6 +46,7 @@ client.connect().then(() => {
     classroomBookingCollection = database.collection("classroom-bookings");
     labBookingCollection = database.collection("lab-bookings");
     userDashboardCollection = database.collection("user-dashboard");
+    galleryCollection = database.collection("gallery");
     console.log("📚 Database collections initialized");
 });
 
@@ -296,6 +298,56 @@ app.get('/api/user-dashboard/:email', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching user dashboard', error: error.message });
+  }
+});
+
+// ========== GALLERY ROUTES ==========
+
+// Get all gallery photos
+app.get('/api/gallery', async (req, res) => {
+  try {
+    const photos = await galleryCollection.find().sort({ createdAt: -1 }).toArray();
+    res.json(photos);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching gallery photos', error: error.message });
+  }
+});
+
+// Get gallery photos by category
+app.get('/api/gallery/category/:category', async (req, res) => {
+  try {
+    const photos = await galleryCollection.find({ category: req.params.category }).sort({ createdAt: -1 }).toArray();
+    res.json(photos);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching gallery photos', error: error.message });
+  }
+});
+
+// Add new photo to gallery
+app.post('/api/gallery', async (req, res) => {
+  try {
+    const newPhoto = {
+      ...req.body,
+      createdAt: new Date().toISOString()
+    };
+    const result = await galleryCollection.insertOne(newPhoto);
+    res.status(201).json({ message: 'Photo added to gallery successfully', photoId: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding photo to gallery', error: error.message });
+  }
+});
+
+// Delete photo from gallery
+app.delete('/api/gallery/:id', async (req, res) => {
+  try {
+    const result = await galleryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+    if (result.deletedCount > 0) {
+      res.json({ message: 'Photo deleted successfully' });
+    } else {
+      res.status(404).json({ message: 'Photo not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting photo', error: error.message });
   }
 });
 
