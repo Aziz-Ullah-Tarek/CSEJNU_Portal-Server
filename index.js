@@ -19,38 +19,25 @@ const client = new MongoClient(uri, {
   }
 });
 
+// Global variable to cache the database connection
+let cachedDb = null;
+
 async function connectDB() {
+  if (cachedDb) {
+    return cachedDb;
+  }
+
   try {
     await client.connect();
-    await client.db("admin").command({ ping: 1 });
+    const db = client.db("CSEJNU_PortalDB");
+    cachedDb = db;
     console.log("✅ Successfully connected to MongoDB!");
+    return db;
   } catch (error) {
     console.error("❌ MongoDB connection error:", error);
-    process.exit(1);
+    throw error;
   }
 }
-
-// Connect to MongoDB
-connectDB();
-
-// Database and Collections
-let noticeCollection;
-let classroomBookingCollection;
-let labBookingCollection;
-let userDashboardCollection;
-let galleryCollection;
-let eventsCollection;
-
-client.connect().then(() => {
-    const database = client.db("CSEJNU_PortalDB");
-    noticeCollection = database.collection("notice");
-    classroomBookingCollection = database.collection("classroom-bookings");
-    labBookingCollection = database.collection("lab-bookings");
-    userDashboardCollection = database.collection("user-dashboard");
-    galleryCollection = database.collection("gallery");
-    eventsCollection = database.collection("events");
-    console.log("📚 Database collections initialized");
-});
 
 // Middleware 
 app.use(cors());
@@ -70,6 +57,8 @@ app.get('/api/health', (req, res) => {
 // Get all notices
 app.get('/api/notices', async (req, res) => {
   try {
+    const db = await connectDB();
+    const noticeCollection = db.collection("notice");
     const notices = await noticeCollection.find().sort({ date: -1 }).toArray();
     res.json(notices);
   } catch (error) {
@@ -80,6 +69,8 @@ app.get('/api/notices', async (req, res) => {
 // Get latest 3 notices
 app.get('/api/notices/latest', async (req, res) => {
   try {
+    const db = await connectDB();
+    const noticeCollection = db.collection("notice");
     const notices = await noticeCollection.find().sort({ date: -1 }).limit(3).toArray();
     res.json(notices);
   } catch (error) {
@@ -90,6 +81,8 @@ app.get('/api/notices/latest', async (req, res) => {
 // Get single notice by ID
 app.get('/api/notices/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const noticeCollection = db.collection("notice");
     const notice = await noticeCollection.findOne({ _id: new ObjectId(req.params.id) });
     if (notice) {
       res.json(notice);
@@ -104,6 +97,8 @@ app.get('/api/notices/:id', async (req, res) => {
 // Create new notice
 app.post('/api/notices', async (req, res) => {
   try {
+    const db = await connectDB();
+    const noticeCollection = db.collection("notice");
     const newNotice = {
       ...req.body,
       date: new Date().toISOString()
@@ -118,6 +113,8 @@ app.post('/api/notices', async (req, res) => {
 // Update notice
 app.put('/api/notices/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const noticeCollection = db.collection("notice");
     const { _id, ...updateData } = req.body;
     const result = await noticeCollection.updateOne(
       { _id: new ObjectId(req.params.id) },
@@ -136,6 +133,8 @@ app.put('/api/notices/:id', async (req, res) => {
 // Delete notice
 app.delete('/api/notices/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const noticeCollection = db.collection("notice");
     const result = await noticeCollection.deleteOne({ _id: new ObjectId(req.params.id) });
     if (result.deletedCount > 0) {
       res.json({ message: 'Notice deleted successfully' });
@@ -152,6 +151,8 @@ app.delete('/api/notices/:id', async (req, res) => {
 // Get all classroom bookings
 app.get('/api/classroom-bookings', async (req, res) => {
   try {
+    const db = await connectDB();
+    const classroomBookingCollection = db.collection("classroom-bookings");
     const bookings = await classroomBookingCollection.find().sort({ createdAt: -1 }).toArray();
     res.json(bookings);
   } catch (error) {
@@ -162,6 +163,8 @@ app.get('/api/classroom-bookings', async (req, res) => {
 // Get bookings by user email
 app.get('/api/classroom-bookings/user/:email', async (req, res) => {
   try {
+    const db = await connectDB();
+    const classroomBookingCollection = db.collection("classroom-bookings");
     const bookings = await classroomBookingCollection.find({ userEmail: req.params.email }).sort({ createdAt: -1 }).toArray();
     res.json(bookings);
   } catch (error) {
@@ -172,6 +175,8 @@ app.get('/api/classroom-bookings/user/:email', async (req, res) => {
 // Create classroom booking
 app.post('/api/classroom-bookings', async (req, res) => {
   try {
+    const db = await connectDB();
+    const classroomBookingCollection = db.collection("classroom-bookings");
     const newBooking = {
       ...req.body,
       status: 'pending',
@@ -187,6 +192,8 @@ app.post('/api/classroom-bookings', async (req, res) => {
 // Update booking status
 app.put('/api/classroom-bookings/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const classroomBookingCollection = db.collection("classroom-bookings");
     const { status } = req.body;
     const result = await classroomBookingCollection.updateOne(
       { _id: new ObjectId(req.params.id) },
@@ -205,6 +212,8 @@ app.put('/api/classroom-bookings/:id', async (req, res) => {
 // Delete classroom booking
 app.delete('/api/classroom-bookings/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const classroomBookingCollection = db.collection("classroom-bookings");
     const result = await classroomBookingCollection.deleteOne({ _id: new ObjectId(req.params.id) });
     if (result.deletedCount > 0) {
       res.json({ message: 'Booking deleted successfully' });
@@ -221,6 +230,8 @@ app.delete('/api/classroom-bookings/:id', async (req, res) => {
 // Get all lab bookings
 app.get('/api/lab-bookings', async (req, res) => {
   try {
+    const db = await connectDB();
+    const labBookingCollection = db.collection("lab-bookings");
     const bookings = await labBookingCollection.find().sort({ createdAt: -1 }).toArray();
     res.json(bookings);
   } catch (error) {
@@ -231,6 +242,8 @@ app.get('/api/lab-bookings', async (req, res) => {
 // Get lab bookings by user email
 app.get('/api/lab-bookings/user/:email', async (req, res) => {
   try {
+    const db = await connectDB();
+    const labBookingCollection = db.collection("lab-bookings");
     const bookings = await labBookingCollection.find({ userEmail: req.params.email }).sort({ createdAt: -1 }).toArray();
     res.json(bookings);
   } catch (error) {
@@ -241,6 +254,8 @@ app.get('/api/lab-bookings/user/:email', async (req, res) => {
 // Create lab booking
 app.post('/api/lab-bookings', async (req, res) => {
   try {
+    const db = await connectDB();
+    const labBookingCollection = db.collection("lab-bookings");
     const newBooking = {
       ...req.body,
       status: 'pending',
@@ -256,6 +271,8 @@ app.post('/api/lab-bookings', async (req, res) => {
 // Update lab booking status
 app.put('/api/lab-bookings/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const labBookingCollection = db.collection("lab-bookings");
     const { status } = req.body;
     const result = await labBookingCollection.updateOne(
       { _id: new ObjectId(req.params.id) },
@@ -274,6 +291,8 @@ app.put('/api/lab-bookings/:id', async (req, res) => {
 // Delete lab booking
 app.delete('/api/lab-bookings/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const labBookingCollection = db.collection("lab-bookings");
     const result = await labBookingCollection.deleteOne({ _id: new ObjectId(req.params.id) });
     if (result.deletedCount > 0) {
       res.json({ message: 'Lab booking deleted successfully' });
@@ -290,6 +309,10 @@ app.delete('/api/lab-bookings/:id', async (req, res) => {
 // Get user's all bookings (classroom + lab)
 app.get('/api/user-dashboard/:email', async (req, res) => {
   try {
+    const db = await connectDB();
+    const classroomBookingCollection = db.collection("classroom-bookings");
+    const labBookingCollection = db.collection("lab-bookings");
+    
     const classroomBookings = await classroomBookingCollection.find({ userEmail: req.params.email }).sort({ createdAt: -1 }).toArray();
     const labBookings = await labBookingCollection.find({ userEmail: req.params.email }).sort({ createdAt: -1 }).toArray();
     
@@ -308,6 +331,8 @@ app.get('/api/user-dashboard/:email', async (req, res) => {
 // Get all gallery photos
 app.get('/api/gallery', async (req, res) => {
   try {
+    const db = await connectDB();
+    const galleryCollection = db.collection("gallery");
     const photos = await galleryCollection.find().sort({ createdAt: -1 }).toArray();
     res.json(photos);
   } catch (error) {
@@ -318,6 +343,8 @@ app.get('/api/gallery', async (req, res) => {
 // Get gallery photos by category
 app.get('/api/gallery/category/:category', async (req, res) => {
   try {
+    const db = await connectDB();
+    const galleryCollection = db.collection("gallery");
     const photos = await galleryCollection.find({ category: req.params.category }).sort({ createdAt: -1 }).toArray();
     res.json(photos);
   } catch (error) {
@@ -328,6 +355,8 @@ app.get('/api/gallery/category/:category', async (req, res) => {
 // Add new photo to gallery
 app.post('/api/gallery', async (req, res) => {
   try {
+    const db = await connectDB();
+    const galleryCollection = db.collection("gallery");
     const newPhoto = {
       ...req.body,
       createdAt: new Date().toISOString()
@@ -342,6 +371,8 @@ app.post('/api/gallery', async (req, res) => {
 // Delete photo from gallery
 app.delete('/api/gallery/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const galleryCollection = db.collection("gallery");
     const result = await galleryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
     if (result.deletedCount > 0) {
       res.json({ message: 'Photo deleted successfully' });
@@ -358,6 +389,8 @@ app.delete('/api/gallery/:id', async (req, res) => {
 // Get all events
 app.get('/api/events', async (req, res) => {
   try {
+    const db = await connectDB();
+    const eventsCollection = db.collection("events");
     const events = await eventsCollection.find().sort({ date: -1 }).toArray();
     res.json(events);
   } catch (error) {
@@ -368,6 +401,8 @@ app.get('/api/events', async (req, res) => {
 // Get single event by ID
 app.get('/api/events/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const eventsCollection = db.collection("events");
     const event = await eventsCollection.findOne({ _id: new ObjectId(req.params.id) });
     if (event) {
       res.json(event);
@@ -382,6 +417,8 @@ app.get('/api/events/:id', async (req, res) => {
 // Create new event
 app.post('/api/events', async (req, res) => {
   try {
+    const db = await connectDB();
+    const eventsCollection = db.collection("events");
     const newEvent = {
       ...req.body,
       createdAt: new Date().toISOString()
@@ -396,6 +433,8 @@ app.post('/api/events', async (req, res) => {
 // Update event
 app.put('/api/events/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const eventsCollection = db.collection("events");
     const { _id, ...updateData } = req.body;
     const result = await eventsCollection.updateOne(
       { _id: new ObjectId(req.params.id) },
@@ -414,6 +453,8 @@ app.put('/api/events/:id', async (req, res) => {
 // Delete event
 app.delete('/api/events/:id', async (req, res) => {
   try {
+    const db = await connectDB();
+    const eventsCollection = db.collection("events");
     const result = await eventsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
     if (result.deletedCount > 0) {
       res.json({ message: 'Event deleted successfully' });
@@ -425,7 +466,12 @@ app.delete('/api/events/:id', async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🎓 JNU CSE Portal Server Started on http://localhost:${PORT}`);
-});
+// For serverless (Vercel)
+export default app;
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🎓 JNU CSE Portal Server Started on http://localhost:${PORT}`);
+  });
+}
